@@ -4,6 +4,32 @@ using UnityEngine;
 public class Git : EditorWindow
 {
 
+    private class FileToggle
+    {
+        private string filename;
+        private bool toggle;
+        public FileToggle(string filename, bool toggle = false)
+        {
+            this.filename = filename;
+            this.toggle = toggle;
+        }
+
+        public string GetFilename() 
+        {
+            return filename;
+        }
+
+        public bool GetBool()
+        {
+            return toggle;
+        }
+
+        public void SetBool(bool toggle)
+        {
+            this.toggle = toggle;
+        }
+    }
+
     //wraps git ops
     private class GitAccessor
     {
@@ -18,14 +44,27 @@ public class Git : EditorWindow
         private string gitPath,selectedBranch,selectedRemote; //we don't want to
         //store much, but these are more convienent to store here, then elsewhere
 
+        private System.IO.FileSystemWatcher fs;
+        private System.Collections.ArrayList changedFiles;
+
         //constructor, given the exectuable git path, and a ts
         public GitAccessor(string gitPath) {
             this.gitPath = gitPath;
+            this.fs = new System.IO.FileSystemWatcher(".");
+            this.fs.Changed += new System.IO.FileSystemEventHandler(this.FileChanged);
+            this.fs.Created += new System.IO.FileSystemEventHandler(this.FileChanged);
+            this.fs.Deleted += new System.IO.FileSystemEventHandler(this.FileChanged);
+            this.fs.Renamed += new System.IO.RenamedEventHandler(this.FileRenamed);
         }
 
         public void UpdateGitPath(string gitPath)
         {
             this.gitPath = gitPath;
+            this.fs = new System.IO.FileSystemWatcher(".");
+            this.fs.Changed += new System.IO.FileSystemEventHandler(this.FileChanged);
+            this.fs.Created += new System.IO.FileSystemEventHandler(this.FileChanged);
+            this.fs.Deleted += new System.IO.FileSystemEventHandler(this.FileChanged);
+            this.fs.Renamed += new System.IO.RenamedEventHandler(this.FileRenamed);
         }
 
         public string GetGitPath()
@@ -77,6 +116,9 @@ public class Git : EditorWindow
 
         public void SelectBranch(string branchName)
         {
+            if (GIT_GLOBAL_DEBUG)
+                Debug.Log("Selected remote: " + branchName);
+
             ExecuteCommand("checkout", branchName);
             selectedBranch = branchName;
             //throw new GitAccessorException("Select Branch Failure");
@@ -84,6 +126,8 @@ public class Git : EditorWindow
 
         public void SelectRemote(string remoteName)
         {
+            if (GIT_GLOBAL_DEBUG)
+                Debug.Log("Selected remote: "+remoteName);
             selectedRemote = remoteName;
         }
 
@@ -112,16 +156,24 @@ public class Git : EditorWindow
 
         public void Add(params string[] files)
         {
-            ExecuteCommand("add",files);
+            string[] res = ExecuteCommand("add", files);
+            string ex = "";
+            foreach (string s in res)
+                ex += s + " ";
+            Debug.Log(ex);
+            throw new GitAccessorException(ex);
         }
 
         private string[] ExecuteCommand(string command, params string[] arguments)
         {
-            string args = "";
+            string args = " ";
             foreach (string a in arguments)
                 args += a + " ";
 
             System.Collections.ArrayList lines = new System.Collections.ArrayList();
+            if (GIT_GLOBAL_DEBUG)
+                Debug.Log("starting git process w/ "+command+args);
+
             System.Diagnostics.Process p = System.Diagnostics.Process.Start(
             new System.Diagnostics.ProcessStartInfo
             {
@@ -145,6 +197,37 @@ public class Git : EditorWindow
             
             return (string[]) lines.ToArray(typeof(string));
         }
+
+        public FileToggle[] GetChangedFiles()
+        {
+            if (changedFiles == null)
+                return null;
+            else
+                return (FileToggle[])changedFiles.ToArray(typeof(FileToggle)); 
+        }
+
+        private void FileChanged(object source, System.IO.FileSystemEventArgs e)
+        {
+            if (changedFiles == null)
+                changedFiles = new System.Collections.ArrayList();
+
+            if (!changedFiles.Contains(new FileToggle(e.FullPath)))
+                changedFiles.Add(new FileToggle(e.FullPath));
+
+        }
+
+        private void FileRenamed(object source, System.IO.RenamedEventArgs e)
+        {
+            if (changedFiles == null)
+                changedFiles = new System.Collections.ArrayList();
+
+            if (!changedFiles.Contains(new FileToggle(e.OldFullPath)))
+            {
+                changedFiles.Remove(new FileToggle(e.OldFullPath));
+                changedFiles.Add(new FileToggle(e.FullPath));
+            }
+                
+        }
     }
 
 
@@ -158,6 +241,7 @@ public class Git : EditorWindow
     private int branchIndex = 0,oldBranchIndex = 0,remoteIndex = 0, oldRemoteIndex = 0;
     private int[] branchInts, remoteInts;
     private string[] branchStrings, remoteStrings;
+    private string message;
     
     // Add menu item named "My Window" to the Window menu
     [MenuItem("Window/Git")]
@@ -186,6 +270,10 @@ public class Git : EditorWindow
             Debug.Log("GIT: OnFocus Called.");
 
         resumeState();
+
+        if (gitAccessor != null)
+            gitAccessor.UpdateGitPath(gitAccessor.GetGitPath()); //if we regain focus, dirty verify that fs is constructed
+
     }
 
     void OnLostFocus()
@@ -207,11 +295,57 @@ public class Git : EditorWindow
     void OnGUI()
     {
 
+        EditorGUILayout.BeginVertical();
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Pull"))
+        {
+            try
+            {
+                gitAccessor.Pull();
+            }
+            catch (GitAccessor.GitAccessorException e)
+            {
+                message = e.Message.ToString();
+            }
+        }
+
         if (GUILayout.Button("Add * - Commit"))
         {
-            gitAccessor.Add("*");
-            gitAccessor.Commit();
+            try
+            {
+                gitAccessor.Add("*");
+                gitAccessor.Commit();
+            }
+            catch (GitAccessor.GitAccessorException e)
+            {
+                message = e.Message.ToString();
+            }
         }
+
+        if (GUILayout.Button("Push"))
+        {
+            try
+            {
+                gitAccessor.Push();
+            }
+            catch (GitAccessor.GitAccessorException e)
+            {
+                message = e.Message.ToString();
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
+        GUILayout.Label(message);
+        EditorGUILayout.EndVertical();
+
+        //the files that you've changed
+        EditorGUILayout.BeginVertical();
+        FileToggle[] files = gitAccessor.GetChangedFiles();
+        if (files != null)
+            foreach (FileToggle f in files)
+                f.SetBool(EditorGUILayout.Toggle(f.GetFilename(), f.GetBool()));
+        EditorGUILayout.EndVertical();
+
 
         //CORE SETTINGS
         coreSettings = EditorGUILayout.Foldout(coreSettings, "Core Settings");
@@ -241,6 +375,12 @@ public class Git : EditorWindow
                 if (branchInts.Length > 0 && branchStrings.Length > 0)
                     if (branchInts.Length == branchStrings.Length)
                     {
+                        if (branchInts.Length == 1)
+                        {
+                            gitAccessor.SelectBranch(branchStrings[0]);
+                            branchIndex = 0;
+                        }
+
                         oldBranchIndex = branchIndex;
                         branchIndex = EditorGUILayout.IntPopup("Branch: ", branchIndex, branchStrings, branchInts);
                         if (oldBranchIndex != branchIndex)
@@ -285,6 +425,12 @@ public class Git : EditorWindow
                 if (remoteInts.Length > 0 && remoteStrings.Length > 0)
                     if (remoteInts.Length == remoteStrings.Length)
                     {
+                        if (remoteInts.Length == 1)
+                        {
+                            gitAccessor.SelectRemote(remoteStrings[0]);
+                            remoteIndex = 0;
+                        }
+
                         oldRemoteIndex = remoteIndex;
                         branchIndex = EditorGUILayout.IntPopup("Remote: ", branchIndex, remoteStrings, remoteInts);
                         if (oldRemoteIndex != remoteIndex)

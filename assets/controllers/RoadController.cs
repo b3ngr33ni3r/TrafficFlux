@@ -23,7 +23,9 @@ public class RoadController : MonoBehaviour {
     
     // Use this for initialization
 	void Start () {
-        Add(new RoadSegment(new Vector3(), new Quaternion(), new Vector3()));
+        for (int x = 0; ; )
+            for (int y = 0; y < 100; y++)
+                Add(new RoadSegment(new Vector3(x, 0, y), new Quaternion(), new Vector3()));
 	}
 	
 	// Update is called once per frame
@@ -36,9 +38,11 @@ public class RoadController : MonoBehaviour {
 
             int spawnCount = 0;
             foreach (RoadSegment road in sync) {
-                if (spawnCount>spawnLimit)
+                if (spawnCount > spawnLimit)
                     break;
                 GameObject o = PoolManager.Spawn(poolRoadName);
+                if (o == null)
+                    break;
                 o.transform.position = road.GetPosition();
                 o.transform.rotation = road.GetRotation();
                

@@ -99,7 +99,7 @@ public class PrefabPool
 	/// </summary>
 	public GameObject Pop()
 	{
-		if (HardLimit && SpawnCount >= Limit)
+        if (HardLimit && SpawnCount >= Limit)
 			return null;
 		
 		if (Pool.Count > 0)

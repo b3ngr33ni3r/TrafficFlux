@@ -11,6 +11,8 @@ public class RoadController : MonoBehaviour {
     public string poolRoadName="RoadSegment";
     public int spawnLimit = 3;
 
+    private int ySpawnPoint = 100;//for demoing constant creation
+
     private static ArrayList _roads;
    // private ArrayList _spawnedRoads;
 
@@ -23,25 +25,26 @@ public class RoadController : MonoBehaviour {
     
     // Use this for initialization
 	void Start () {
-        for (int x = 0; ; )
-            for (int y = 0; y < 100; y++)
+        int x = 0;
+            for (int y = 0; y < ySpawnPoint; y++)
                 Add(new RoadSegment(new Vector3(x, 0, y), new Quaternion(), new Vector3()));
 	}
 	
 	// Update is called once per frame
 	void Update () {
         ArrayList sync = ArrayList.Synchronized(_roads);
+
         if (sync.Count > 0)
         {
             //if (_spawnedRoads == null)
             //    _spawnedRoads = new ArrayList();
 
-            int spawnCount = 0;
+            int spawnCount = 0;//only spawn spawnLimit segements each Update() this does that.
             foreach (RoadSegment road in sync) {
                 if (spawnCount > spawnLimit)
                     break;
                 GameObject o = PoolManager.Spawn(poolRoadName);
-                if (o == null)
+                if (o == null)//this should hit when the hard limit is reached
                     break;
                 o.transform.position = road.GetPosition();
                 o.transform.rotation = road.GetRotation();
@@ -52,5 +55,10 @@ public class RoadController : MonoBehaviour {
             sync.RemoveRange(0, spawnCount);
         }
 	}
+
+    void FixedUpdate()
+    {
+        Add(new RoadSegment(new Vector3(0, 0, ySpawnPoint++), new Quaternion(), new Vector3()));
+    }
 
 }

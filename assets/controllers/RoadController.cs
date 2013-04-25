@@ -8,7 +8,7 @@ using System.Collections;
 //to spawn per iteration of Update()
 public class RoadController : MonoBehaviour {
 
-    public string poolRoadName="RoadSegment";
+    public string roadPoolName="RoadSegment";
     public int spawnLimit = 3;
 
     private int ySpawnPoint = 100;//for demoing constant creation
@@ -17,6 +17,9 @@ public class RoadController : MonoBehaviour {
    // private ArrayList _spawnedRoads;
 
     //call this to tell road segments to be drawn
+	//note that road segments are given world points, so 
+	//thats where they are drawn, not at DrawDistance, like
+	//other things (ie billboards)
     public static void Add(RoadSegment road) {
         if (_roads == null)
             _roads = new ArrayList();
@@ -43,7 +46,7 @@ public class RoadController : MonoBehaviour {
             foreach (RoadSegment road in sync) {
                 if (spawnCount > spawnLimit)
                     break;
-                GameObject o = PoolManager.Spawn(poolRoadName);
+                GameObject o = PoolManager.Spawn(roadPoolName);
                 if (o == null)//this should hit when the hard limit is reached
                     break;
                 o.transform.position = road.GetPosition();

@@ -22,7 +22,7 @@ public class CarBehaviour : MonoBehaviour {
 	public float lane_x = 0.0f;
 	public float lane_z = 0.0f;
 	float DistanceToGo=0;
-	bool changing_lanes = false;
+	public bool changing_lanes = false;
 	
 	public float distance_traveled = 0f;
 	
@@ -41,31 +41,29 @@ public class CarBehaviour : MonoBehaviour {
 		translate_comp.z=speed;
 		
 		if(Input.GetKeyDown(KeyCode.LeftArrow)) {
-			changing_lanes=true;
 			lane++;
 			DistanceToGo-=2;
-			//if(speed > 0.25)
-				//speed-=0.15f;
 		} else if(Input.GetKeyDown(KeyCode.RightArrow)) {
-			changing_lanes=true;
 			lane--;
 			DistanceToGo+=2;
-			//if(speed > 0.25)
-				//speed-=0.15f;
 		}
-		if(DistanceToGo>0.05 || DistanceToGo<-0.05) {
+		
+		float moveDistance = 11f*Time.deltaTime;
+		
+		if(DistanceToGo>moveDistance || DistanceToGo<-moveDistance) {
 			if(DistanceToGo < 0) {
-				transform.Translate(-11f*Time.deltaTime, 0, 0);
-				DistanceToGo+=11f*Time.deltaTime;
-				lane_x+=11f*Time.deltaTime*Mathf.Sin(Mathf.Deg2Rad*transform.rotation.y);
-				lane_z+=11f*Time.deltaTime*Mathf.Cos(Mathf.Deg2Rad*transform.rotation.y);
+				transform.Translate(-moveDistance, 0, 0);
+				DistanceToGo+=moveDistance;
+				lane_x+=moveDistance*Mathf.Sin(Mathf.Deg2Rad*transform.rotation.y);
+				lane_z+=moveDistance*Mathf.Cos(Mathf.Deg2Rad*transform.rotation.y);
 			} else if(DistanceToGo > 0) {
-				transform.Translate(11f*Time.deltaTime, 0, 0);
-				DistanceToGo-=11f*Time.deltaTime;
-				lane_x-=11f*Time.deltaTime*Mathf.Sin(Mathf.Deg2Rad*transform.rotation.y);
-				lane_z-=11f*Time.deltaTime*Mathf.Cos(Mathf.Deg2Rad*transform.rotation.y);
+				transform.Translate(moveDistance, 0, 0);
+				DistanceToGo-=moveDistance;
+				lane_x-=moveDistance*Mathf.Sin(Mathf.Deg2Rad*transform.rotation.y);
+				lane_z-=moveDistance*Mathf.Cos(Mathf.Deg2Rad*transform.rotation.y);
 			}
 		} else {
+			transform.Translate(DistanceToGo, 0, 0, Space.Self);
 			DistanceToGo=0;	
 			changing_lanes=false;
 			lane_x=0;
@@ -82,8 +80,6 @@ public class CarBehaviour : MonoBehaviour {
 		transform.Translate(translate_comp);
 		distance_traveled+=speed;
 		score_board.text=""+Mathf.Ceil(distance_traveled);
-		
-		Debug.Log(Time.time);
 		
 		for(int i = 0; i < timeSpeeds.Length; i++) {
 			if(Time.time < timeSpeeds[i].x) {
@@ -193,6 +189,22 @@ public class CarBehaviour : MonoBehaviour {
     	    float dist = Vector3.Distance(transform.localPosition, endPos);
 			if(dist < .001) {
 				transform.localPosition = endPos;
+			} else {
+    	    	yield return null; 
+    	    }
+    	}
+	}
+	IEnumerable Translation(Vector3 distance, float time) {
+		Debug.Log("T");
+    	float t = 0.0f;
+    	while (t < 1.0) {
+    	    t += Time.deltaTime * (1/time);
+			transform.Translate(Vector3.Lerp(new Vector3(0,0,0), distance, t),Space.Self);
+    	    //transform.localPosition = Vector3.Lerp(startPos, endPos, t);
+    	    float dist = Vector3.Distance(transform.localPosition, transform.localPosition+distance);
+			if(dist < .001) {
+				changing_lanes=false;
+				//transform.localPosition = endPos;
 			} else {
     	    	yield return null; 
     	    }

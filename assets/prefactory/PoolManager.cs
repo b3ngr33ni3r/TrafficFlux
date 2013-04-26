@@ -71,7 +71,8 @@ public class PoolManager : MonoBehaviour
 				continue;
 			
 			pp.Awake();
-			Pools.Add(pp.Prefab.PrefabName, pp);
+			if(!Pools.ContainsKey(pp.Prefab.PrefabName))
+				Pools.Add(pp.Prefab.PrefabName, pp);
 		}
 	}
 	

@@ -26,7 +26,7 @@ public class CameraBehaviour : MonoBehaviour {
 			0,
 			car.position.z-transform.position.z,Space.World);
 		
-		transform.Translate(0,0,-3,Space.Self);
+		transform.Translate(0,0,0.5f,Space.Self);
 		
 		//transform.LookAt(car);
 	}

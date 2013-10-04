@@ -3,7 +3,7 @@ using System.Collections;
 
 public class CarBehaviour : MonoBehaviour {
 
-	public int iterator = 0;
+	public int iterator = 1;
 	
 	public NodeConstructor nc;
 	public Vector3 target_v;
@@ -16,7 +16,8 @@ public class CarBehaviour : MonoBehaviour {
 	public int lane = 1;
 	
 	void Start () {
-		target_v = nc.GetNode(iterator).position;
+		//target_v = nc.GetNode(iterator).position;
+		target_v=new Vector3(5,0,0);
 	}
 	
 	public float lane_x = 0.0f;
@@ -63,6 +64,7 @@ public class CarBehaviour : MonoBehaviour {
 				lane_z-=moveDistance*Mathf.Cos(Mathf.Deg2Rad*transform.rotation.y);
 			}
 		} else {
+			Debug.Log("HERE, " + iterator);
 			transform.Translate(DistanceToGo, 0, 0, Space.Self);
 			DistanceToGo=0;	
 			changing_lanes=false;
